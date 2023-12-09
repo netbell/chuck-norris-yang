@@ -1,0 +1,7 @@
+---
+all:
+  children:
+    lab_routers:
+      hosts:
+        router01:
+          ansible_host: 192.168.10.242

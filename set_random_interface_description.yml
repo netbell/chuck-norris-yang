@@ -1,0 +1,46 @@
+---
+- name: Set random interface description with NETCONF YANG
+  hosts: lab_routers
+  gather_facts: no
+  connection: netconf
+
+  tasks:
+    - name: Get interface information using NETCONF
+      netconf_get:
+        filter: <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces"/>
+      register: netconf_response
+
+    - name: Convert XML to dictionary
+      set_fact:
+        interface_data: "{{ netconf_response.stdout | ansible.utils.from_xml }}"
+
+    - name: Extract interface names
+      set_fact:
+        interface_names: "{{ interface_data['data']['interfaces']['interface'] | map(attribute='name') | list }}"
+
+    - name: Select a random interface
+      set_fact:
+        interface_name: "{{ interface_names | random }}"
+      when: interface_names is defined and interface_names | length > 0
+
+    - name: Fetch a Chuck Norris joke
+      uri:
+        url: https://api.chucknorris.io/jokes/random
+        return_content: yes
+      register: joke_response
+
+    - name: Parse the joke
+      set_fact:
+        joke: "{{ joke_response.json.value }}"
+
+    - name: Set interface description using NETCONF
+      netconf_config:
+        xml: |
+          <config xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+            <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+              <interface>
+                <name>{{ interface_name }}</name>
+                <description>{{ joke }}</description>
+              </interface>
+            </interfaces>
+          </config>
